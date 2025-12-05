@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -26,49 +27,56 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        String path = request.getServletPath();
+        String path = request.getRequestURI();
         System.out.println("➡ PATH RECIBIDO: " + path);
 
-        // ⭐ 1. Ignorar rutas públicas
-        if (path.startsWith("/api/auth/")) {
+        // ⭐ Rutas públicas - no se valida token ⭐
+        if (path.equals("/api/auth/login") || path.equals("/api/auth/register")) {
             System.out.println("➡ RUTA PÚBLICA — JWT IGNORADO");
             filterChain.doFilter(request, response);
             return;
         }
 
-        // ⭐ 2. Leer Header Authorization
+        // ⭐ Leer Authorization
         String header = request.getHeader("Authorization");
         System.out.println("➡ HEADER RECIBIDO: " + header);
-        
+
         if (header == null || !header.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
+            System.out.println("⛔ SIN TOKEN EN RUTA PROTEGIDA");
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
 
         String token = header.substring(7);
 
-        // ⭐ 3. Validar token
+        // ⭐ Validar token
         if (!jwtUtil.validateToken(token)) {
-            filterChain.doFilter(request, response);
+            System.out.println("⛔ TOKEN INVALIDO");
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
 
-        // ⭐ 4. Extraer username del token
+        // ⭐ Obtener usuario del token
         String username = jwtUtil.getUsernameFromToken(token);
 
-        // ⭐ 5. Si no hay autenticación previa, autenticar
+        // ⭐ Autenticar si no hay sesión previa
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
 
-            UsernamePasswordAuthenticationToken authToken =
+            UsernamePasswordAuthenticationToken authenticationToken =
                     new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities()
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
                     );
 
-            SecurityContextHolder.getContext().setAuthentication(authToken);
+            authenticationToken.setDetails(
+                    new WebAuthenticationDetailsSource().buildDetails(request)
+            );
+
+            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
         }
 
-        // ⭐ 6. Continuar la cadena de filtros
         filterChain.doFilter(request, response);
     }
 }

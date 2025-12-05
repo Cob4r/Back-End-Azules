@@ -16,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/equipos")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin
 public class EquipoController {
 
     private final EquipoService equipoService;
@@ -36,13 +36,45 @@ public class EquipoController {
 
         Equipo guardado = equipoService.guardar(equipo);
 
-        // Enviar notificación a RabbitMQ
         rabbitTemplate.convertAndSend(
                 RabbitConfig.QUEUE_EQUIPOS,
                 "Nuevo equipo creado: " + guardado.getNombre()
         );
 
         return ResponseEntity.ok(guardado);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Equipo> actualizar(
+            @PathVariable Long id,
+            @Valid @RequestBody EquipoRequest request) {
+
+        Equipo equipo = equipoService.buscarPorId(id)
+                .orElseThrow(() -> new RuntimeException("Equipo no encontrado"));
+
+        equipo.setNombre(request.getNombre());
+        equipo.setDescripcion(request.getDescripcion());
+
+        Equipo actualizado = equipoService.guardar(equipo);
+
+        rabbitTemplate.convertAndSend(
+                RabbitConfig.QUEUE_EQUIPOS,
+                "Equipo actualizado: " + actualizado.getNombre()
+        );
+
+        return ResponseEntity.ok(actualizado);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        equipoService.eliminar(id);
+
+        rabbitTemplate.convertAndSend(
+                RabbitConfig.QUEUE_EQUIPOS,
+                "Equipo eliminado: " + id
+        );
+
+        return ResponseEntity.noContent().build();
     }
 
     @Data

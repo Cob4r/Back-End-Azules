@@ -20,7 +20,7 @@ public class JwtUtil {
         this.expirationMs = expirationMs;
     }
 
-    // ⭐ CREAR TOKEN
+    // ⭐ Crear Token
     public String generateToken(String username) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
@@ -33,39 +33,36 @@ public class JwtUtil {
                 .compact();
     }
 
-    // ⭐ OBTENER USERNAME
+    // ⭐ Obtener Username desde el token
     public String getUsernameFromToken(String token) {
+        return extractAllClaims(token).getSubject();
+    }
+
+    // ⭐ Validar el token
+    public boolean validateToken(String token) {
+        try {
+            extractAllClaims(token);
+            System.out.println("✔ TOKEN VALIDO");
+            return true;
+        } catch (ExpiredJwtException e) {
+            System.out.println("❌ TOKEN EXPIRADO");
+        } catch (UnsupportedJwtException e) {
+            System.out.println("❌ TOKEN NO SOPORTADO");
+        } catch (MalformedJwtException e) {
+            System.out.println("❌ TOKEN MAL FORMADO");
+        } catch (SignatureException e) {
+            System.out.println("❌ FIRMA INVALIDA");
+        } catch (IllegalArgumentException e) {
+            System.out.println("❌ TOKEN VACIO O NULO");
+        }
+        return false;
+    }
+
+    private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
-    }
-
-    // ⭐ VALIDAR TOKEN (CON LOGS)
-    public boolean validateToken(String token) {
-        try {
-            Jwts.parserBuilder()
-                    .setSigningKey(key)
-                    .build()
-                    .parseClaimsJws(token);
-
-            System.out.println("✔ TOKEN VALIDO");
-            return true;
-
-        } catch (ExpiredJwtException e) {
-            System.out.println("❌ TOKEN EXPIRADO: " + e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            System.out.println("❌ TOKEN NO SOPORTADO: " + e.getMessage());
-        } catch (MalformedJwtException e) {
-            System.out.println("❌ TOKEN MAL FORMADO: " + e.getMessage());
-        } catch (SignatureException e) {
-            System.out.println("❌ FIRMA INVALIDA: " + e.getMessage());
-        } catch (IllegalArgumentException e) {
-            System.out.println("❌ TOKEN VACIO O NULO: " + e.getMessage());
-        }
-
-        return false;
+                .getBody();
     }
 }
