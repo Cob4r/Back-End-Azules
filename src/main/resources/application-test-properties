@@ -1,0 +1,13 @@
+# BD del test (Docker)
+spring.datasource.url=jdbc:postgresql://localhost:5433/testdb
+spring.datasource.username=test
+spring.datasource.password=test
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# Config Hibernate para test
+spring.jpa.hibernate.ddl-auto=create-drop
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+# Puerto random para evitar conflicto
+server.port=0

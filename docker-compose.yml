@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres-biblioteca
+    environment:
+      POSTGRES_DB: biblioteca_db
+      POSTGRES_USER: biblioteca_user
+      POSTGRES_PASSWORD: biblioteca_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-biblioteca
+    ports:
+      - "5672:5672"     # Puerto para la app
+      - "15672:15672"   # Panel web
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+volumes:
+  postgres_data:
