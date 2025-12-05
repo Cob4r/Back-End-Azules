@@ -30,14 +30,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         System.out.println("➡ PATH RECIBIDO: " + path);
 
-        // ⭐ Rutas públicas - no se valida token ⭐
+        // ⭐ Rutas públicas ⭐
         if (path.equals("/api/auth/login") || path.equals("/api/auth/register")) {
             System.out.println("➡ RUTA PÚBLICA — JWT IGNORADO");
             filterChain.doFilter(request, response);
             return;
         }
 
-        // ⭐ Leer Authorization
         String header = request.getHeader("Authorization");
         System.out.println("➡ HEADER RECIBIDO: " + header);
 
@@ -47,28 +46,26 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = header.substring(7);
+        // 🔥 LIMPIAR TOKEN (eliminamos cualquier "Bearer " que venga de más)
+        String token = header.replace("Bearer ", "").trim();
 
-        // ⭐ Validar token
+        System.out.println("➡ TOKEN LIMPIO: " + token.substring(0, 10) + "...");
+
         if (!jwtUtil.validateToken(token)) {
             System.out.println("⛔ TOKEN INVALIDO");
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
 
-        // ⭐ Obtener usuario del token
+        // ⭐ Autenticación
         String username = jwtUtil.getUsernameFromToken(token);
 
-        // ⭐ Autenticar si no hay sesión previa
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
 
             UsernamePasswordAuthenticationToken authenticationToken =
                     new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
+                            userDetails, null, userDetails.getAuthorities());
 
             authenticationToken.setDetails(
                     new WebAuthenticationDetailsSource().buildDetails(request)
